@@ -1,4 +1,5 @@
 local M = {}
+local termUtil = require("terminal-utilities")
 
 -- Default config structure
 M.defaultRunners = {
@@ -200,32 +201,78 @@ function M.select_runner_dialog()
     }, function(choice)
         if choice then
             if choice.type == "Project" then
-                M.run_project_in_tab(choice.data)
-            else
-                vim.notify("Compound selected: " .. choice.name)
+                M.run_project_in_split(choice.data)
+            elseif choice.type == "Compound" then
+                -- Load all projects for this compound
+                termUtil.run_compound_in_one_split(choice.data, runners.projects)
             end
         end
     end)
 end
 
-function M.run_project_in_tab(project)
-    vim.cmd("tabnew")
-    vim.cmd("terminal")
-    local job_id = vim.b.terminal_job_id  -- set automatically for terminal buffers
+function M.run_project_in_split(project)
+    -- 1. Save the current window handle
+    local prev_win = vim.api.nvim_get_current_win()
 
-    vim.cmd("startinsert")
+    -- 2. Open horizontal split and resize
+    vim.cmd("split")
+    vim.cmd("resize 10")
 
-    if project.dir and #project.dir > 0 then
-        local cd_cmd = "cd " .. vim.fn.shellescape(project.dir) .. "\n"
-        vim.api.nvim_chan_send(job_id, cd_cmd)
+    -- 3. Open terminal
+    local shell = os.getenv("SHELL") or "sh"
+    vim.cmd("terminal " .. shell)
+    -- Get the terminal job id
+    local job_id = vim.b.terminal_job_id
+
+    -- 4. Build and send command
+    local command = ""
+    if project.dir and #project.dir > 0 and project.command and #project.command > 0 then
+        command = "cd " .. vim.fn.shellescape(project.dir) .. " && " .. project.command
+    elseif project.dir and #project.dir > 0 then
+        command = "cd " .. vim.fn.shellescape(project.dir)
+    elseif project.command and #project.command > 0 then
+        command = project.command
     end
-    if project.command and #project.command > 0 then
-        vim.api.nvim_chan_send(job_id, project.command .. "\n")
+
+    if #command > 0 then
+        vim.defer_fn(function()
+            vim.api.nvim_chan_send(job_id, command .. "\n")
+        end, 100) -- 100ms delay to ensure shell is ready
     end
+
+    -- 5. Restore focus to the original window
+    vim.defer_fn(function()
+        if vim.api.nvim_win_is_valid(prev_win) then
+            vim.api.nvim_set_current_win(prev_win)
+        end
+    end, 150) -- Slightly longer delay than the command send
+end
+
+M.kill_all_project_runner_jobs = function()
+    local killed = 0
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_loaded(buf) then
+            local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
+            if buftype == "terminal" then
+                local ok, job_id = pcall(function() return vim.api.nvim_buf_get_var(buf, "terminal_job_id") end)
+                if ok and job_id and job_id > 0 then
+                    vim.fn.jobstop(job_id)
+                    killed = killed + 1
+                end
+                -- Close (wipe) the buffer
+                vim.api.nvim_buf_delete(buf, { force = true })
+            end
+        end
+    end
+    vim.notify("Killed " .. killed .. " project runner terminal job(s) and wiped their buffers.")
 end
 
 vim.api.nvim_create_user_command("ProjectRunnerSelect", function()
     require("project_runner").select_runner_dialog()
+end, {})
+
+vim.api.nvim_create_user_command("ProjectRunnerKillAll", function()
+    require("project_runner").kill_all_project_runner_jobs()
 end, {})
 
 M.execute = function()
