@@ -126,6 +126,10 @@ return {
 
 ## 🛠️ Roadmap
 
+- [ ] Locally scoped runners. (Instead of global projects, Base the projects on the active directory)
+- [ ] Auto-generate projects based on common patterns (dotnet-.csproj files)
+- [ ] Pre-run tasks. (Tasks to run before running the project)
+- [ ] Build task errors take your cursor to the location of the error
 - [ ] Add support for per-project env vars and arguments
 - [ ] Optional vertical splits or tabs
 - [ ] Custom actions on success/failure
