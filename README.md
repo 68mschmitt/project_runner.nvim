@@ -126,6 +126,8 @@ return {
 
 ## 🛠️ Roadmap
 
+- [ ] Ability to edit the existing runners
+- [ ] Auto complete pathing
 - [ ] Locally scoped runners. (Instead of global projects, Base the projects on the active directory)
 - [ ] Auto-generate projects based on common patterns (dotnet-.csproj files)
 - [ ] Pre-run tasks. (Tasks to run before running the project)
