@@ -1,6 +1,7 @@
 local config = require("project_runner.config")
 local utils = require("project_runner.utils")
 local executor = require("project_runner.executor")
+local fileio = require("project_runner.file_io")
 local runner_file = config.runner_file
 
 local M = {}
@@ -21,7 +22,7 @@ M.add_project_dialog = function()
     end
 
     local project = {}
-    local runners = config.load()
+    local runners = fileio.load()
 
     input("Project name: ", function(name)
         if not name or name == "" then return end
@@ -40,7 +41,7 @@ M.add_project_dialog = function()
                 project.command = cmd
 
                 table.insert(runners.projects, project)
-                config.save(runners)
+                fileio.save(runners)
                 vim.notify("Added project '" .. project.name .. "' to project_runner.")
             end)
         end)
@@ -48,7 +49,7 @@ M.add_project_dialog = function()
 end
 
 M.add_compound_dialog = function()
-    local runners = config.load()
+    local runners = fileio.load()
     local available_projects = {}
     for _, project in ipairs(runners.projects) do
         table.insert(available_projects, project.name)
@@ -67,7 +68,7 @@ M.add_compound_dialog = function()
             if #available_projects == 0 then
                 if #compound.projects > 0 then
                     table.insert(runners.compounds, compound)
-                    config.save(runners)
+                    fileio.save(runners)
                     vim.notify("Added compound '" .. compound.name .. "' to project_runner.")
                 else
                     vim.notify("No projects added to compound.", vim.log.levels.WARN)
@@ -88,7 +89,7 @@ M.add_compound_dialog = function()
                 else
                     if #compound.projects > 0 then
                         table.insert(runners.compounds, compound)
-                        config.save(runners)
+                        fileio.save(runners)
                         vim.notify("Added compound '" .. compound.name .. "' to project_runner.")
                     else
                         vim.notify("No projects added to compound.", vim.log.levels.WARN)
