@@ -1,4 +1,5 @@
 local utils = require("project_runner.utils")
+local config = require("project_runner.config").options
 local M = {}
 
 M.open_single_split = function(height)
@@ -46,7 +47,7 @@ M.run_project_in_split = function(project)
         if vim.api.nvim_win_is_valid(prev_win) then
             vim.api.nvim_set_current_win(prev_win)
         end
-    end, 2000)
+    end, config.window_switch_timeout or 200)
 end
 
 M.run_compound_in_one_split = function(compound, all_projects)
